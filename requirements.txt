@@ -1,9 +1,10 @@
 fastapi
 uvicorn
-langgraph
+sqlalchemy
+pymysql
 openai
 mysql-connector-python
 python-dotenv
-smtplib-client
-imaplib2
-email
+apscheduler
+pydantic[email]
+logging
