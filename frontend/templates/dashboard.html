@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+
+<style>
+    :root {
+        --primary-color: #0d6efd;
+        --success-color: #198754;
+        --warning-color: #ffca2c;
+        --danger-color: #dc3545;
+        --info-color: #0dcaf0; 
+        --dark-color: #212529;
+        --light-gray: #f8f9fa;
+        --dark-text: #343a40;
+        --light-text: #6c757d;
+        --page-bg: #eef2f7;
+        --card-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+        --card-hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: var(--page-bg);
+    }
+
+    /* Main container styling */
+    .dashboard-main {
+        padding: 2rem 1.5rem;
+    }
+
+    /* Header styling */
+    .dashboard-header {
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 1rem;
+    }
+    .dashboard-header h4 {
+        color: var(--dark-text);
+        font-weight: 700;
+    }
+
+    /* Base card styling */
+    .stat-card {
+        background-color: #fff;
+        border: none;
+        border-radius: 1rem;
+        box-shadow: var(--card-shadow);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--card-hover-shadow);
+    }
+
+    /* Icon circle styling */
+    .icon-circle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        color: #fff;
+    }
+    .icon-primary { background-color: var(--primary-color); }
+    .icon-success { background-color: var(--success-color); }
+    .icon-warning { background-color: var(--warning-color); }
+    .icon-danger { background-color: var(--danger-color); } /* Added for Do Not Contact */
+    .icon-info { background-color: var(--info-color); } /* Added for Drip Mails */
+    .icon-dark { background-color: var(--dark-color); } /* Added for Avg Response Time */
+
+
+    /* Card content styling */
+    .stat-card .card-body {
+        padding: 1.5rem;
+    }
+    .stat-card .card-title {
+        color: var(--light-text);
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .stat-card .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--dark-text);
+        line-height: 1.2;
+    }
+
+    /* Special KPI card for conversion rate */
+    .kpi-card {
+        background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+        color: #fff;
+    }
+    .kpi-card .card-title {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .kpi-card .stat-number, .kpi-card .bi {
+        color: #fff;
+    }
+
+    /* Chart container styling */
+    .chart-card {
+        background-color: #fff;
+        border: none;
+        border-radius: 1rem;
+        box-shadow: var(--card-shadow);
+        padding: 1.5rem;
+        height: 100%;
+    }
+    .chart-card h6 {
+        font-weight: 700;
+        color: var(--dark-text);
+        margin-bottom: 1rem;
+    }
+</style>
+
+<main class="dashboard-main container-fluid">
+    <div class="dashboard-header d-flex justify-content-between align-items-center">
+        <h4>Welcome, {{ user | default('User') }}</h4>
+        <small class="text-muted">{{ current_date }}</small>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-primary me-3">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Total Clients</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ total_clients | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-success me-3">
+                        <i class="bi bi-send"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Initial Mail Sent</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ initial_mail_sent | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-warning me-3">
+                        <i class="bi bi-chat-dots"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Replies Received</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ received_mail | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card kpi-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle bg-white bg-opacity-25 me-3">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Conversion Rate</h6>
+                        <p class="stat-number mb-0">
+                            {{ ((received_mail | default(0) / initial_mail_sent | default(1)) * 100) | round(2) if initial_mail_sent else 0 }}%
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-success me-3">
+                        <i class="bi bi-hand-thumbs-up"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Positive Replies</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ positive_replies | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-primary me-3">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Meetings Booked</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ meetings_booked | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-info me-3">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Drip Mails Sent</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ drip_mails_sent | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="card-body d-flex align-items-center">
+                    <div class="icon-circle icon-danger me-3">
+                        <i class="bi bi-shield-slash"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-title text-uppercase">Stop Contact Requests</h6>
+                        <p class="stat-number mb-0 counter" data-target="{{ do_not_contact_requests | default(0) }}">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <h6 class="text-center">Mail Status Distribution</h6>
+                <canvas id="mailDoughnutChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-card">
+                <h6 class="text-center">Client Engagement Funnel</h6>
+                <canvas id="mailBarChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</main>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Counter Animation
+    const counters = document.querySelectorAll('.counter');
+    const animationDuration = 1500; // ms
+    counters.forEach(counter => {
+        const target = +counter.getAttribute('data-target');
+        const updateCounter = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = timestamp - start;
+            const percentage = Math.min(progress / animationDuration, 1);
+            const currentCount = Math.floor(target * percentage);
+            counter.textContent = currentCount.toLocaleString(); // Add commas to numbers
+            if (progress < animationDuration) {
+                requestAnimationFrame(updateCounter);
+            } else {
+                counter.textContent = target.toLocaleString();
+            }
+        };
+        let start = null;
+        requestAnimationFrame(updateCounter);
+    });
+
+    // Get colors from CSS variables for chart consistency
+    const styles = getComputedStyle(document.documentElement);
+    const primaryColor = styles.getPropertyValue('--primary-color').trim();
+    const successColor = styles.getPropertyValue('--success-color').trim();
+    const warningColor = styles.getPropertyValue('--warning-color').trim();
+    const infoColor = styles.getPropertyValue('--info-color').trim(); // New
+    const dangerColor = styles.getPropertyValue('--danger-color').trim(); // New
+    const darkText = styles.getPropertyValue('--dark-text').trim();
+    const lightText = styles.getPropertyValue('--light-text').trim();
+
+    // Chart Data calculations (updated to use new variables where relevant)
+    const notContacted = Math.max(0, {{ total_clients | default(0) }} - {{ initial_mail_sent | default(0) }});
+    const sentButNoReply = Math.max(0, {{ initial_mail_sent | default(0) }} - {{ received_mail | default(0) }});
+
+    // Doughnut Chart
+    const doughnutCtx = document.getElementById('mailDoughnutChart').getContext('2d');
+    const mailDoughnutChart = new Chart(doughnutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Positive Replies', 'Other Replies', 'Sent (No Reply)', 'Not Contacted', 'Do Not Contact'],
+            datasets: [{
+                data: [
+                    {{ positive_replies | default(0) }},
+                    Math.max(0, {{ received_mail | default(0) }} - {{ positive_replies | default(0) }}), // Other Replies
+                    sentButNoReply,
+                    notContacted,
+                    {{ do_not_contact_requests | default(0) }} // New
+                ],
+                backgroundColor: [successColor, warningColor, primaryColor, lightText, dangerColor], // Adjusted colors
+                borderColor: '#fff',
+                borderWidth: 4,
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        font: { size: 12, family: 'Poppins' },
+                        color: darkText,
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                }
+            }
+        }
+    });
+
+    // Bar Chart
+    const barCtx = document.getElementById('mailBarChart').getContext('2d');
+    // Create gradients for bars (updated to include new colors)
+    const primaryGradient = barCtx.createLinearGradient(0, 0, 0, 300);
+    primaryGradient.addColorStop(0, primaryColor);
+    primaryGradient.addColorStop(1, 'rgba(13, 110, 253, 0.5)');
+
+    const successGradient = barCtx.createLinearGradient(0, 0, 0, 300);
+    successGradient.addColorStop(0, successColor);
+    successGradient.addColorStop(1, 'rgba(25, 135, 84, 0.5)');
+
+    const warningGradient = barCtx.createLinearGradient(0, 0, 0, 300);
+    warningGradient.addColorStop(0, warningColor);
+    warningGradient.addColorStop(1, 'rgba(255, 202, 44, 0.5)');
+
+    const infoGradient = barCtx.createLinearGradient(0, 0, 0, 300); // New
+    infoGradient.addColorStop(0, infoColor);
+    infoGradient.addColorStop(1, 'rgba(13, 202, 240, 0.5)');
+
+    const dangerGradient = barCtx.createLinearGradient(0, 0, 0, 300); // New
+    dangerGradient.addColorStop(0, dangerColor);
+    dangerGradient.addColorStop(1, 'rgba(220, 53, 69, 0.5)');
+
+
+    const mailBarChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Total Clients', 'Mail Sent', 'Replies Received', 'Positive Replies', 'Meetings Booked', 'Stop Requests'], // Updated labels
+            datasets: [{
+                label: 'Count',
+                data: [
+                    {{ total_clients | default(0) }},
+                    {{ initial_mail_sent | default(0) }},
+                    {{ received_mail | default(0) }},
+                    {{ positive_replies | default(0) }}, // New data
+                    {{ meetings_booked | default(0) }},   // New data
+                    {{ do_not_contact_requests | default(0) }} // New data
+                ],
+                backgroundColor: [primaryGradient, successGradient, warningGradient, successGradient, primaryGradient, dangerGradient], // Adjusted colors
+                borderRadius: 8,
+                barPercentage: 0.6,
+                categoryPercentage: 0.7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: darkText,
+                    titleColor: '#fff',
+                    bodyColor: '#f8f9fa',
+                    padding: 12,
+                    cornerRadius: 8,
+                    boxPadding: 4,
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: lightText, font: { size: 12, weight: '600', family: 'Poppins' } },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: lightText, font: { size: 12, family: 'Poppins' } },
+                    grid: { color: '#e9ecef', borderDash: [5, 5] }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

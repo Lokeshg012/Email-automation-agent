@@ -1,0 +1,67 @@
+<style>
+    .sidebar {
+        width: 240px; 
+        top: 69px; 
+        transition: all 0.3s;
+    }
+
+    .sidebar .nav-link {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--dark-text, #343a40);
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .sidebar .nav-link i {
+        font-size: 1.2rem;
+        margin-right: 0.75rem;
+    }
+
+    /* --- HOVER and ACTIVE states --- */
+    .sidebar .nav-link:hover {
+        background-color: #f0f4ff; 
+        color: var(--primary-color, #0d6efd);
+        transform: translateX(5px);
+    }
+
+    .sidebar .nav-link.active {
+        background: linear-gradient(90deg, #0d6efd, #2575fc);
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+    }
+</style>
+
+
+<nav id="sidebarMenu" class="sidebar d-flex flex-column p-3 bg-white shadow-lg rounded-3 min-vh-100 position-fixed">
+    
+    <ul class="nav flex-column gap-2">
+        <li class="nav-item">
+            <a class="nav-link active" href="/dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/client-management">
+                <i class="bi bi-people"></i> Client Management
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/email">
+                <i class="bi bi-envelope"></i> Email Campaigns
+            </a>
+        </li>
+    </ul>
+
+    <ul class="nav flex-column gap-2 mt-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="/logout">
+                <i class="bi bi-box-arrow-left"></i> Logout
+            </a>
+        </li>
+    </ul>
+</nav>

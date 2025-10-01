@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Client Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-primary mb-4">Client Management</h2>
+
+    <!-- Buttons -->
+    <div class="mb-3 d-flex gap-2">
+        <a href="/client/add" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Manual Input
+        </a>
+
+        <!-- Button to toggle CSV Upload Form -->
+        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#uploadCsvForm" aria-expanded="false" aria-controls="uploadCsvForm">
+            <i class="bi bi-upload"></i> Upload CSV
+        </button>
+    </div>
+
+    <!-- Collapsible CSV Upload Form -->
+    <div class="collapse" id="uploadCsvForm">
+        <div class="card card-body mt-2">
+            {% include "partials/upload_csv.html" %}
+        </div>
+    </div>
+
+    <!-- Client Table -->
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Client List</h5>
+            {% include "partials/client_table.html" %}
+        </div>
+    </div>
+</div>
+<!-- Toast container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="toastNotification" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+<script>
+$(document).ready(function () {
+
+    function initDataTable() {
+        $('#clientTable').DataTable({
+            "pageLength": 15,
+            "lengthMenu": [5, 10, 25, 50],
+            "ordering": true,
+            "searching": true
+        });
+    }
+
+    initDataTable(); // initialize DataTable
+
+    function showToast(message, type='success') {
+        const toastEl = $('#toastNotification');
+        $('#toastMessage').text(message);
+        toastEl.removeClass('text-bg-success text-bg-danger');
+        toastEl.addClass(type === 'success' ? 'text-bg-success' : 'text-bg-danger');
+        const toast = new bootstrap.Toast(toastEl[0], { delay: 3000 }); // auto-hide after 3s
+        toast.show();
+    }
+
+    // AJAX CSV upload
+    $('form').on('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(response) {
+                showToast("CSV uploaded successfully!", 'success');
+
+                // Refresh client table
+                $.get("/client-table", function(data){
+                    $('#clientTableContainer').html(data);
+                    initDataTable();
+                });
+
+                // Collapse CSV form
+                $('#uploadCsvForm').collapse('hide');
+            },
+            error: function() {
+                showToast("Error uploading CSV!", 'danger');
+            }
+        });
+    });
+
+});
+</script>
+
+
+{% endblock %}

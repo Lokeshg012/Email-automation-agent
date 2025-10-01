@@ -1,0 +1,36 @@
+<div class="table-responsive">
+    <table id="clientTable" class="table table-striped table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Email <small class="text-muted">(click to view details)</small></th>
+                <th>Company</th>
+                <th>Company URL</th>
+                <th>LinkedIn URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td>{{ client.name }}</td>
+                <td><a href="/client/{{ client.id }}" class="text-decoration-none text-primary fw-medium">{{ client.email }}</a></td>
+                <td>{{ client.company_name }}</td>
+                <td>
+                    {% if client.company_url %}
+                    <a href="{{ client.company_url }}" target="_blank">{{ client.company_url }}</a>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if client.linkedin %}
+                    <a href="{{ client.linkedin }}" target="_blank">View Profile</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center text-muted">No clients added yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

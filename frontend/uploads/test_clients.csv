@@ -1,0 +1,4 @@
+name,email,company_name,company_url,linkedin,company,linkedin_url
+Alice Johnson,alice@example.com,Tech Corp,https://techcorp.com,https://linkedin.com/in/alice,,
+Bob Smith,bob@example.com,,https://innovate.com,,Innovate Ltd,https://linkedin.com/in/bob
+Charlie Lee,charlie@example.com,NextGen,https://nextgen.com,https://linkedin.com/in/charlie,,

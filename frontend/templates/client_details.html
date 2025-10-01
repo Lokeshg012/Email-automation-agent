@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Client Details - {{ client.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header with Back Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary mb-0">Client Details</h2>
+        <a href="/client-management" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Clients
+        </a>
+    </div>
+
+    <!-- Client Details Card -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>{{ client.name }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Personal Information -->
+                <div class="col-md-6">
+                    <h5 class="text-primary mb-3"><i class="bi bi-person me-2"></i>Personal Information</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Full Name</label>
+                        <p class="form-control-plaintext border-bottom pb-2">{{ client.name or 'Not provided' }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Email Address</label>
+                        <p class="form-control-plaintext border-bottom pb-2">
+                            {% if client.email %}
+                                <a href="mailto:{{ client.email }}" class="text-decoration-none">{{ client.email }}</a>
+                            {% else %}
+                                Not provided
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">LinkedIn Profile</label>
+                        <p class="form-control-plaintext border-bottom pb-2">
+                            {% if client.linkedin %}
+                                <a href="{{ client.linkedin }}" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-linkedin me-1"></i>{{ client.linkedin }}
+                                </a>
+                            {% else %}
+                                Not provided
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Company Information -->
+                <div class="col-md-6">
+                    <h5 class="text-primary mb-3"><i class="bi bi-building me-2"></i>Company Information</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Company Name</label>
+                        <p class="form-control-plaintext border-bottom pb-2">{{ client.company_name or 'Not provided' }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Company Website</label>
+                        <p class="form-control-plaintext border-bottom pb-2">
+                            {% if client.company_url %}
+                                <a href="{{ client.company_url }}" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-globe me-1"></i>{{ client.company_url }}
+                                </a>
+                            {% else %}
+                                Not provided
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted">Industry</label>
+                        <p class="form-control-plaintext border-bottom pb-2">{{ client.industry or 'Not provided' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Campaign Status Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5 class="text-primary mb-3"><i class="bi bi-envelope me-2"></i>Campaign Status</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Current Status</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.status %}
+                                        <span class="badge bg-info">{{ client.status.title() }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not Started</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Mail Sent Status</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.mail_sent_status %}
+                                        <span class="badge bg-primary">{{ client.mail_sent_status }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not Sent</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Booking Status</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.booking_status %}
+                                        <span class="badge bg-success">{{ client.booking_status.title() }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No Booking</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Timeline Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5 class="text-primary mb-3"><i class="bi bi-clock-history me-2"></i>Email Timeline</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">First Email Sent</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.first_mail_date %}
+                                        {{ client.first_mail_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {% else %}
+                                        Not sent yet
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Drip 1 Sent</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.drip1_date %}
+                                        {{ client.drip1_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {% else %}
+                                        Not sent yet
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Drip 2 Sent</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.drip2_date %}
+                                        {{ client.drip2_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {% else %}
+                                        Not sent yet
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Drip 3 Sent</label>
+                                <p class="form-control-plaintext border-bottom pb-2">
+                                    {% if client.drip3_date %}
+                                        {{ client.drip3_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                    {% else %}
+                                        Not sent yet
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="d-flex gap-2">
+                        <a href="mailto:{{ client.email }}" class="btn btn-primary">
+                            <i class="bi bi-envelope me-1"></i>Send Email
+                        </a>
+                        <a href="{{ client.linkedin }}" target="_blank" class="btn btn-outline-primary" {% if not client.linkedin %}disabled{% endif %}>
+                            <i class="bi bi-linkedin me-1"></i>View LinkedIn
+                        </a>
+                        <a href="{{ client.company_url }}" target="_blank" class="btn btn-outline-secondary me-2" {% if not client.company_url %}disabled{% endif %}>
+                            <i class="bi bi-globe me-1"></i>Visit Website
+                        </a>
+                        <a href="/client/{{ client.id }}/emails" class="btn btn-outline-info">
+                            <i class="bi bi-envelope me-1"></i>Email History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-control-plaintext {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #495057;
+    background-color: transparent;
+    border: none;
+    padding: 0.375rem 0;
+}
+
+.border-bottom {
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+.badge {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.card {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.card-header {
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+</style>
+{% endblock %}

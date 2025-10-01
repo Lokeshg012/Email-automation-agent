@@ -175,3 +175,10 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+# Custom entries
+pulp_strategy.docx
+ca.pem
+drip test.py
+test replies
+quick test

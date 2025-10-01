@@ -1,0 +1,5 @@
+name,email,company,company_url,linkedin_url
+John Doe,john@example.com,Acme Corp,https://www.acme.com,https://www.linkedin.com/in/johndoe
+Jane Smith,jane@example.com,GlobalTech,https://www.globaltech.com,https://www.linkedin.com/in/janesmith
+Alice Johnson,alice@example.com,NextGen Solutions,https://www.nextgen.com,https://www.linkedin.com/in/alicejohnson
+Bob Brown,bob@example.com,InnovateX,https://www.innovatex.com,https://www.linkedin.com/in/bobbrown

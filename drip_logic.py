@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from models import Contact, ContentInfo, SessionLocal
+from tables import Contact, ContentInfo, SessionLocal
+from sqlalchemy import and_,or_
 from mail_service import send_drip_email, send_initial_email
+from zoneinfo import ZoneInfo
 from openai import OpenAI
 import os
+from datetime import timezone
 from dotenv import load_dotenv
 import logging
+from tables import get_db_session
 
 load_dotenv()
 
@@ -15,374 +19,202 @@ logger = logging.getLogger(__name__)
 class DripCampaignManager:
     def __init__(self):
         self.drip_intervals = {
-            1: 0,  # Send drip1 immediately
-            2: 3,  # Send drip2 after 3 days
-            3: 5   # Send drip3 after 5 days from drip2
+            1: 7, 
+            2: 14,
+            3: 30  
         }
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
-    def schedule_drip1(self, contact: Contact, db: Session):
-        """Schedule drip1 immediately for existing contact"""
+    def generate_industry_for_contact(self, contact: Contact) -> str:
         try:
-            # Ensure ContentInfo exists for this contact (don't create new if exists)
-            if not contact.content_info:
-                content_info = ContentInfo(contact_id=contact.id)
-                db.add(content_info)
-                db.flush()  # Get the ID without committing
-                contact.content_info = content_info
-            
-            # Send drip1 immediately
-            drip1_content = send_drip_email(contact, 1)
-            
-            if drip1_content:
-                now = datetime.utcnow()
-                contact.drip1_date = now
-                contact.last_email_sent = now
-                
-                # Schedule drip2 for 3 days later
-                contact.drip2_date = now + timedelta(days=self.drip_intervals[2])
-                
-                # Update content table with drip1 content
-                content_info = db.query(ContentInfo).filter(ContentInfo.contact_id == contact.id).first()
-                if content_info:
-                    content_info.drip1_email_content = drip1_content
-                
-                db.commit()
-                logger.info(f"Drip1 sent and drip2 scheduled for contact: {contact.email}")
-                return True
-            else:
-                logger.error(f"Failed to send drip1 for contact: {contact.email}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error scheduling drip1 for {contact.email}: {str(e)}")
-            db.rollback()
-            return False
-    
-    def process_pending_drips(self):
-        """Process all pending drip campaigns"""
-        db = SessionLocal()
-        try:
-            now = datetime.utcnow()
-            
-            # Find contacts ready for drip2
-            drip2_contacts = db.query(Contact).filter(
-                Contact.status != "replied",
-                Contact.drip1_date.isnot(None),
-                Contact.drip2_date <= now,
-                Contact.drip2_date.isnot(None)
-            ).all()
-            
-            for contact in drip2_contacts:
-                if self.send_drip2(contact, db):
-                    logger.info(f"Drip2 sent to {contact.email}")
-            
-            # Find contacts ready for drip3
-            drip3_contacts = db.query(Contact).filter(
-                Contact.status != "replied",
-                Contact.drip2_date.isnot(None),
-                Contact.drip3_date <= now,
-                Contact.drip3_date.isnot(None)
-            ).all()
-            
-            for contact in drip3_contacts:
-                if self.send_drip3(contact, db):
-                    logger.info(f"Drip3 sent to {contact.email}")
+            prompt = f"""
+You are an expert business analyst. Analyze this company's information and determine their primary industry category.
+
+Company Details:
+Company Name: {contact.company_name}
+Website: {contact.company_url}
+
+Instructions:
+1. Analyze the company name and website URL for industry indicators
+2. Select the MOST SPECIFIC category that applies
+3. Return ONLY the industry name from this list:
+
+Primary Industries:
+- Technology & Software
+- Digital Marketing & Advertising
+- E-commerce & Online Retail
+- Healthcare & Medical
+- Financial Services
+- Education & EdTech
+- Manufacturing & Industrial
+- Real Estate & Property
+- Media & Entertainment
+- Business Services
+- Retail & Consumer Goods
+- Travel & Hospitality
+- Energy & Utilities
+- Telecommunications
+- Automotive & Transportation
+- Food & Beverage
+- Fashion & Apparel
+- Insurance
+- Legal Services
+- IT Services
+- Construction
+- Pharmaceuticals
+- Others (ONLY if no other category fits)
+
+Respond with ONLY the industry name, no explanations or additional text.
+Example responses:
+"Digital Marketing & Advertising"
+"Technology & Software"
+"Financial Services"
+"""
+            for temp in [0.1, 0.3, 0.5]:
+                try:
+                    response = self.openai_client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=temp
+                    )
                     
+                    industry = response.choices[0].message.content.strip().replace('"', '')
+                    if industry and 3 <= len(industry) <= 50:
+                        return industry
+                    
+                except Exception as inner_e:
+                    logger.warning(f"Attempt {temp} failed for {contact.email}: {str(inner_e)}")
+                    continue
+            
+            return None
+            
         except Exception as e:
-            logger.error(f"Error processing pending drips: {str(e)}")
-        finally:
-            db.close()
+            logger.error(f"Error generating industry for {contact.email}: {str(e)}")
+            return None
     
-    def send_drip2(self, contact: Contact, db: Session) -> bool:
-        """Send drip2 email"""
-        try:
-            drip2_content = send_drip_email(contact, 2)
-            
-            if drip2_content:
-                now = datetime.utcnow()
-                contact.last_email_sent = now
-                
-                # Schedule drip3 for 5 days later
-                contact.drip3_date = now + timedelta(days=self.drip_intervals[3])
-                
-                # Clear drip2_date to mark as sent
-                contact.drip2_date = now
-                
-                # Update content table with drip2 content
-                content_info = db.query(ContentInfo).filter(ContentInfo.contact_id == contact.id).first()
-                if content_info:
-                    content_info.drip2_email_content = drip2_content
-                
-                db.commit()
-                return True
-            else:
-                logger.error(f"Failed to send drip2 for contact: {contact.email}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error sending drip2 for {contact.email}: {str(e)}")
-            db.rollback()
-            return False
-    
-    def send_drip3(self, contact: Contact, db: Session) -> bool:
-        """Send drip3 email (final drip)"""
-        try:
-            drip3_content = send_drip_email(contact, 3)
-            
-            if drip3_content:
-                now = datetime.utcnow()
-                contact.last_email_sent = now
-                
-                # Mark drip3 as sent
-                contact.drip3_date = now
-                
-                # Update content table with drip3 content
-                content_info = db.query(ContentInfo).filter(ContentInfo.contact_id == contact.id).first()
-                if content_info:
-                    content_info.drip3_email_content = drip3_content
-                
-                db.commit()
-                return True
-            else:
-                logger.error(f"Failed to send drip3 for contact: {contact.email}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error sending drip3 for {contact.email}: {str(e)}")
-            db.rollback()
-            return False
-    
-    def stop_drips_for_replied_contact(self, contact: Contact, db: Session):
-        """Stop all future drips when contact replies"""
-        try:
-            # Clear future drip dates
-            if contact.drip2_date and contact.drip2_date > datetime.utcnow():
-                contact.drip2_date = None
-            if contact.drip3_date and contact.drip3_date > datetime.utcnow():
-                contact.drip3_date = None
-                
-            db.commit()
-            logger.info(f"Stopped future drips for replied contact: {contact.email}")
-            
-        except Exception as e:
-            logger.error(f"Error stopping drips for {contact.email}: {str(e)}")
-            db.rollback()
-    
-    def get_drip_status(self, contact_id: int) -> dict:
-        """Get drip campaign status for a contact"""
-        db = SessionLocal()
-        try:
-            contact = db.query(Contact).filter(Contact.id == contact_id).first()
-            if not contact:
-                return {"error": "Contact not found"}
-            
-            now = datetime.utcnow()
-            status = {
-                "contact_id": contact.id,
-                "email": contact.email,
-                "status": contact.status,
-                "drip1_sent": contact.drip1_date is not None,
-                "drip1_date": contact.drip1_date,
-                "drip2_scheduled": contact.drip2_date is not None,
-                "drip2_date": contact.drip2_date,
-                "drip2_ready": contact.drip2_date and contact.drip2_date <= now if contact.drip2_date else False,
-                "drip3_scheduled": contact.drip3_date is not None,
-                "drip3_date": contact.drip3_date,
-                "drip3_ready": contact.drip3_date and contact.drip3_date <= now if contact.drip3_date else False,
-                "last_email_sent": contact.last_email_sent,
-                "reply_date": contact.reply_date
-            }
-            
-            return status
-            
-        except Exception as e:
-            logger.error(f"Error getting drip status for contact {contact_id}: {str(e)}")
-            return {"error": str(e)}
-        finally:
-            db.close()
+
+    def process_initial_emails(self):
+        """
+        Finds all new contacts, generates their industry if missing,
+        and triggers the initial email send.
+        """
+        with get_db_session() as db:
+            contacts = db.query(Contact).filter(Contact.mail_sent_status.is_(None)).all()
+            logger.info(f"Found {len(contacts)} new contacts to process for initial emails.")
+
+            for contact in contacts:
+                try:
+                    # Generate industry if it's missing
+                    if not contact.industry:
+                        if not (contact.company_name and contact.company_url):
+                            logger.warning(f"Skipping {contact.email}: Missing company details to generate industry.")
+                            continue
+                        
+                        industry = self.generate_industry_for_contact(contact)
+                        if industry:
+                            contact.industry = industry
+                            logger.info(f"Generated industry '{industry}' for {contact.email}")
+                        else:
+                            logger.error(f"Failed to generate industry for {contact.email}, skipping.")
+                            continue
+                    
+                    # Send the email and update the contact's status on success.
+                    # The send_initial_email function now handles creating the ContentInfo record.
+                    if send_initial_email(contact, db):
+                        contact.mail_sent_status = 1
+                        contact.first_mail_date = datetime.now(ZoneInfo("Asia/Kolkata"))
+                        db.commit()
+                        logger.info(f"Successfully processed and sent initial email to {contact.email}")
+                    else:
+                        logger.error(f"send_initial_email function failed for {contact.email}, rolling back.")
+                        db.rollback()
+
+                except Exception as e:
+                    logger.error(f"A critical error occurred while processing contact {contact.email}: {str(e)}")
+                    db.rollback()
+
+    def process_drips(self):
+        """Processes all contacts eligible for their next drip email."""
+        with get_db_session() as db:
+            now = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+            # Find contacts who haven't replied and are in the drip sequence.
+            contacts = db.query(Contact).filter(
+                or_(Contact.status.is_(None), Contact.status != "do_not_contact"),
+                Contact.mail_sent_status.in_([1, 2, 3])
+            ).all()
+            logger.info(f"Found {len(contacts)} contacts eligible for drip processing.")
+
+            for contact in contacts:
+                try:
+                    drip_to_send = 0
+                    if contact.mail_sent_status == 1 and (now - contact.first_mail_date).days >= self.drip_intervals[1]:
+                        drip_to_send = 1
+                    elif contact.mail_sent_status == 2 and (now - contact.drip1_date).days >= self.drip_intervals[2]:
+                        drip_to_send = 2
+                    elif contact.mail_sent_status == 3 and (now - contact.drip2_date).days >= self.drip_intervals[3]:
+                        drip_to_send = 3
+
+                    if drip_to_send > 0:
+                        logger.info(f"Attempting to send Drip {drip_to_send} to {contact.email}")
+                        
+                        # The send_drip_email function handles its own ContentInfo creation.
+                        if send_drip_email(contact, drip_to_send, db):
+                            if drip_to_send == 1:
+                                contact.drip1_date = now
+                                contact.mail_sent_status = 2
+                            elif drip_to_send == 2:
+                                contact.drip2_date = now
+                                contact.mail_sent_status = 3
+                            elif drip_to_send == 3:
+                                contact.drip3_date = now
+                                contact.mail_sent_status = 4
+                            
+                            db.commit()
+                            logger.info(f"Successfully sent Drip {drip_to_send} to {contact.email}")
+                        else:
+                            logger.error(f"send_drip_email function failed for Drip {drip_to_send} to {contact.email}")
+
+                except Exception as e:
+                    logger.error(f"A critical error occurred processing drips for {contact.email}: {str(e)}")
+                    db.rollback()
 
 # Global drip campaign manager
 drip_manager = DripCampaignManager()
 
 def add_new_contact_and_start_drip(name: str, email: str, company_name: str, 
                                  company_url: str = None, industry: str = None) -> dict:
-    """Add new contact, send initial email, and start drip campaign only if no reply"""
-    db = SessionLocal()
-    try:
+    """Add new contact to database - Agent 1 will handle initial email sending"""
+    with get_db_session() as db:
         # Check if contact already exists
         existing_contact = db.query(Contact).filter(Contact.email == email).first()
         if existing_contact:
-            # Work with existing contact - update their row
-            contact = existing_contact
-            # Update fields if provided
-            if name:
-                contact.name = name
-            if company_name:
-                contact.company_name = company_name
-            if company_url:
-                contact.company_url = company_url
-            if industry:
-                contact.industry = industry
-        else:
-            # Create new contact
-            contact = Contact(
-                name=name,
-                email=email,
-                company_name=company_name,
-                company_url=company_url,
-                industry=industry
-            )
-            db.add(contact)
+            return {"error": "Contact already exists", "contact_id": existing_contact.id}
         
-        db.commit()
-        
-        # Industry is mandatory - generate if not provided
-        if not contact.industry:
-            if not contact.company_name or not contact.company_url:
-                return {"error": "Company name and URL required to generate industry", "contact_id": contact.id}
-            
-            industry = generate_industry_for_contact(contact, db)
-            if not industry:
-                return {"error": "Failed to generate industry", "contact_id": contact.id}
-            
-            logger.info(f"Industry '{industry}' generated for {contact.email}")
-        
-        # Only proceed with emails after industry is confirmed
-        if not contact.industry:
-            return {"error": "Industry is required before sending emails", "contact_id": contact.id}
-        
-        # Send initial email after industry is filled
-        initial_email_content = send_initial_email(contact)
-        if not initial_email_content:
-            return {"error": "Failed to send initial email", "contact_id": contact.id}
-        
-        # Update last_email_sent for initial email
-        contact.last_email_sent = datetime.utcnow()
-        db.commit()
-        
-        # Create ContentInfo record with initial email data
-        content_info = ContentInfo(
-            contact_id=contact.id,
-            client_email=contact.email,
-            initial_email_content=initial_email_content
+        # Create new contact (without sending initial email)
+        contact = Contact(
+            name=name,
+            email=email,
+            company_name=company_name,
+            company_url=company_url,
+            industry=industry,
         )
-        db.add(content_info)
+        db.add(contact)
         db.commit()
         
-        logger.info(f"Initial email sent to {contact.email}")
-        logger.info(f"Content record created for contact {contact.id}")
-        
-        # Start drip campaign only after initial email
-        success = drip_manager.schedule_drip1(contact, db)
-        
-        if success:
-            return {
-                "success": True,
-                "contact_id": contact.id,
-                "message": "Initial email sent and drip campaign scheduled",
-                "email": contact.email
-            }
-        else:
-            return {
-                "error": "Initial email sent but failed to schedule drip campaign",
-                "contact_id": contact.id
-            }
-            
-    except Exception as e:
-        logger.error(f"Error processing contact {email}: {str(e)}")
-        db.rollback()
-        return {"error": str(e)}
-    finally:
-        db.close()
-
-def generate_industry_for_contact(contact: Contact, db: Session) -> str:
-    """Generate industry using LLM for a contact"""
-    try:
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        
-        prompt = f"""
-        Give me only the industry type of this company:
-        Name: {contact.company_name}
-        URL: {contact.company_url}
-        Reply with only the industry name (like 'Fintech', 'Marketing', 'Sports Tech').
-        """
-        
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
-        )
-        
-        industry = response.choices[0].message.content.strip()
-        
-        # Update contact with industry
-        contact.industry = industry
-        db.commit()
-        
-        logger.info(f"Generated industry '{industry}' for {contact.company_name}")
-        return industry
-        
-    except Exception as e:
-        logger.error(f"Error generating industry for {contact.company_name}: {str(e)}")
-        return None
-
-def process_contacts_without_industry():
-    """Process contacts that don't have industry filled and send initial emails"""
-    db = SessionLocal()
-    try:
-        # Fetch contacts without industry
-        contacts = db.query(Contact).filter(
-            Contact.industry.is_(None),
-            Contact.company_name.isnot(None),
-            Contact.company_url.isnot(None)
-        ).all()
-        
-        processed_count = 0
-        
-        for contact in contacts:
-            logger.info(f"Processing contact: {contact.name} ({contact.company_name})")
-            
-            # Generate industry
-            industry = generate_industry_for_contact(contact, db)
-            
-            if industry:
-                # Send initial email first
-                initial_success = send_initial_email(contact)
-                
-                if initial_success:
-                    logger.info(f"Initial email sent to {contact.name}")
-                    
-                    # Update last_email_sent for initial email
-                    contact.last_email_sent = datetime.utcnow()
-                    db.commit()
-                    
-                    # Start drip campaign after initial email
-                    success = drip_manager.schedule_drip1(contact, db)
-                    
-                    if success:
-                        processed_count += 1
-                        logger.info(f"Started drip campaign for {contact.name}")
-                    else:
-                        logger.error(f"Failed to start drip campaign for {contact.name}")
-                else:
-                    logger.error(f"Failed to send initial email to {contact.name}")
-            else:
-                logger.error(f"Failed to generate industry for {contact.name}")
+        logger.info(f"Contact {contact.email} added to database - Agent 1 will send initial email")
         
         return {
-            "message": f"Processed {processed_count} contacts",
-            "total_found": len(contacts),
-            "processed": processed_count
+            "success": True,
+            "contact_id": contact.id,
+            "message": "Contact added successfully - Agent 1 will process initial email",
+            "email": contact.email
         }
-        
-    except Exception as e:
-        logger.error(f"Error processing contacts: {str(e)}")
-        return {"error": str(e)}
-    finally:
-        db.close()
+            
+    
+    db.close()
 
 def trigger_drip_processing():
     """Manually trigger drip processing for testing"""
-    drip_manager.process_pending_drips()
+    drip_manager.process_drips()
     return {"message": "Drip processing triggered"}

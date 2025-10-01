@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Email History - {{ client.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header with Back Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary mb-0">
+            <i class="bi bi-envelope me-2"></i>Email History - {{ client.name }}
+        </h2>
+        <a href="/client/{{ client.id }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Client
+        </a>
+    </div>
+
+    <!-- Email History Card -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="bi bi-envelope-paper me-2"></i>Email Communications
+            </h4>
+        </div>
+        <div class="card-body">
+            {% if emails %}
+                <div class="timeline">
+                    {% for email in emails %}
+                        <div class="timeline-item">
+                            <div class="timeline-badge {% if 'initial' in email.email_type %}bg-primary{% elif 'drip' in email.email_type %}bg-info{% elif 'reply' in email.email_type %}bg-success{% else %}bg-secondary{% endif %}">
+                                <i class="bi bi-{{ 'envelope-check' if 'reply' in email.email_type else 'envelope' }}"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="mb-0">{{ email.subject or 'No Subject' }}</h5>
+                                    <span class="badge bg-{% if 'initial' in email.email_type %}primary{% elif 'drip' in email.email_type %}info{% elif 'reply' in email.email_type %}success{% else %}secondary{% endif %}">
+                                        {{ email.email_type.replace('_', ' ').title() }}
+                                    </span>
+                                </div>
+                                {% if email.body %}
+                                    <div class="email-body p-3 bg-light rounded">
+                                        {{ email.body|safe }}
+                                    </div>
+                                {% else %}
+                                    <div class="alert alert-warning mb-0">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        No email content available
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-envelope-x display-4 text-muted mb-3"></i>
+                    <h4>No email history found</h4>
+                    <p class="text-muted">No emails have been sent to this client yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin: 0;
+    list-style: none;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 2rem;
+    padding-left: 2rem;
+    border-left: 2px solid #e9ecef;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-badge {
+    position: absolute;
+    left: -1rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 1;
+}
+
+.timeline-content {
+    position: relative;
+    margin-left: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.timeline-content h5 {
+    color: #0d6efd;
+    margin-top: 0;
+}
+
+.email-body {
+    /* white-space: pre-wrap; */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: #212529;
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+body{
+    max-width: 100% !important;
+}
+</style>
+{% endblock %}

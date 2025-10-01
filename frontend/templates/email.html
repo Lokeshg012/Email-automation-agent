@@ -1,0 +1,856 @@
+{% extends "base.html" %}
+
+{% block title %}Email Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid" id="email-management-page">
+    <div
+        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2 page-title">Email Campaigns</h1>
+        <button id="sendInitialEmails" class="btn btn-primary" disabled>
+            <i class="bi bi-send-plus me-2"></i> Send Initial Emails
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-4 filter-card">
+        <div class="card-header bg-white">
+            <h5 class="mb-0 card-title">
+                <i class="bi bi-funnel text-primary me-2"></i> Filters
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <label for="searchInput" class="form-label fw-semibold">Search Contacts</label>
+                <div class="input-group search-input-container">
+                    <span class="input-group-text search-icon-main"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control search-input" id="searchInput"
+                        placeholder="Search by name, email, company or industry...">
+                </div>
+                <div class="search-dropzone mt-2" id="searchDropzoneArea">
+                    <div id="searchTags" class="search-tags-container"></div>
+                    <div class="dropzone-placeholder">
+                        <i class="bi bi-arrows-move"></i>
+                        <span>Drag values from table to create filter tags</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <div
+                        class="form-check form-switch switch-container p-0 d-flex justify-content-between align-items-center">
+                        <label class="form-check-label fw-bold" for="initialMailToggle">
+                            <i class="bi bi-envelope-check text-primary me-2"></i> Initial Mail Sent
+                        </label>
+                        <input class="form-check-input switch-input" type="checkbox" id="initialMailToggle"
+                            role="switch">
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div
+                        class="form-check form-switch switch-container p-0 d-flex justify-content-between align-items-center">
+                        <label class="form-check-label fw-bold" for="repliedToggle">
+                            <i class="bi bi-reply text-success me-2"></i> Has Replied
+                        </label>
+                        <input class="form-check-input switch-input" type="checkbox" id="repliedToggle" role="switch">
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div
+                        class="form-check form-switch switch-container p-0 d-flex justify-content-between align-items-center">
+                        <label class="form-check-label fw-bold" for="dateRangeToggle">
+                            <i class="bi bi-calendar-range text-info me-2"></i> Filter by Date
+                        </label>
+                        <input class="form-check-input switch-input" type="checkbox" id="dateRangeToggle" role="switch">
+                    </div>
+                </div>
+            </div>
+
+            <div class="date-range-fields mt-3" style="display: none;" id="dateRangeInputs">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="initialMailDateFrom" class="form-label">From</label>
+                        <input type="date" class="form-control date-input" id="initialMailDateFrom">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="initialMailDateTo" class="form-label">To</label>
+                        <input type="date" class="form-control date-input" id="initialMailDateTo">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top text-center">
+                <button id="resetFilters" class="btn btn-outline-secondary reset-btn">
+                    <i class="bi bi-arrow-counterclockwise me-2"></i> Reset All Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 table-card">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 card-title">
+                <i class="bi bi-people text-primary me-2"></i> Contacts
+                <span class="badge bg-light text-dark ms-2" id="contactCount">0 contacts</span>
+            </h5>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="selectAll">
+                <label class="form-check-label fw-semibold" for="selectAll">Select All Visible</label>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40px;" class="text-center"><i class="bi bi-grip-vertical text-muted"></i>
+                            </th>
+                            <th style="width: 50px;"><input type="checkbox" class="form-check-input" id="selectAllRows">
+                            </th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Company</th>
+                            <th>Industry</th>
+                            <th class="text-center">Initial Sent</th>
+                            <th class="text-center">Replied</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contactsTable">
+                        {% for contact in contacts %}
+                        <tr data-id="{{ contact.id }}"
+                            data-initial-sent="{{ 'yes' if contact.first_mail_date else 'no' }}" {% if
+                            contact.first_mail_date %}
+                            data-initial-sent-date="{{ contact.first_mail_date.strftime('%Y-%m-%d') }}" {% endif %}
+                            data-replied="{{ 'yes' if contact.status == 'replied' else 'no' }}">
+                            <td class="text-center drag-handle-cell"><i class="bi bi-grip-vertical drag-handle"></i>
+                            </td>
+                            <td><input type="checkbox" class="form-check-input select-row" value="{{ contact.id }}">
+                            </td>
+                            <td class="draggable-cell" draggable="true"><span class="fw-bold">{{ contact.name }}</span>
+                            </td>
+                            <td class="draggable-cell" draggable="true"><a href="/client/{{ contact.id }}">{{
+                                    contact.email }}</a></td>
+                            <td class="draggable-cell" draggable="true">{{ contact.company_name or 'N/A' }}</td>
+                            <td class="draggable-cell" draggable="true">
+                                {% if contact.industry %}{{ contact.industry }}{% else %}<span
+                                    class="text-muted">N/A</span>{% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if contact.first_mail_date %}
+                                <span class="status-badge sent">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Sent
+                                    <small class="d-block">{{ contact.first_mail_date.strftime('%b %d, %Y') }}</small>
+                                </span>
+                                {% else %}
+                                <span class="status-badge not-sent">
+                                    <i class="bi bi-x-circle-fill me-1"></i> Not Sent
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if contact.status == 'replied' %}
+                                <span class="status-badge replied">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Yes
+                                </span>
+                                {% else %}
+                                <span class="status-badge no-reply">
+                                    <i class="bi bi-dash-circle-fill me-1"></i> No
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="text-center p-5 empty-state">
+                                    <div class="display-4 text-muted mb-3"><i class="bi bi-inbox"></i></div>
+                                    <h4>No Contacts Found</h4>
+                                    <p>Add some contacts to get started with your campaign.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_css %}
+<style>
+    /* General Page Styles */
+    #email-management-page {
+        padding: 1.5rem;
+        background-color: #f9fafb;
+    }
+
+    .page-title {
+        font-weight: 700;
+        color: #343a40;
+    }
+
+    .card-title {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    /* Enhanced Button Styles */
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.25rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+        background: #e9ecef;
+        box-shadow: none;
+        cursor: not-allowed;
+    }
+
+    .reset-btn {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    /* Enhanced Card Styles */
+    .filter-card,
+    .table-card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .card-header {
+        background-color: #fff !important;
+        border-bottom: 1px solid #e9ecef !important;
+    }
+
+    /* Enhanced Search & Dropzone Styles */
+    .search-input-container {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+
+    .search-input-container:focus-within {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    }
+
+    .search-icon-main {
+        background-color: transparent;
+        border: none;
+        padding-left: 0.75rem;
+        color: #6c757d;
+    }
+
+    .search-input {
+        border: none;
+        padding: 0.75rem;
+    }
+
+    .search-input:focus {
+        box-shadow: none;
+    }
+
+    .search-dropzone {
+        background: #f8f9fa;
+        border: 2px dashed #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        min-height: 50px;
+        transition: all 0.3s ease;
+        position: relative;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .search-dropzone.active {
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.05);
+    }
+
+    .search-tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .search-tag {
+        background: #667eea;
+        color: white;
+        border-radius: 20px;
+        padding: 0.4rem 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .remove-tag {
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .dropzone-placeholder:not(:only-child) {
+        display: none;
+    }
+
+    /* Enhanced Switch Styles */
+    .switch-container {
+        background-color: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+
+    .switch-input {
+        width: 3rem !important;
+        height: 1.5rem !important;
+        margin: 0 !important;
+        background-color: #ced4da !important;
+        border: none !important;
+        cursor: pointer;
+    }
+
+    .switch-input:checked {
+        background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+
+    /* Enhanced Table Styles */
+    .table> :not(caption)>*>* {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .table-hover>tbody>tr {
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .table-hover>tbody>tr:hover {
+        background-color: rgba(102, 126, 234, 0.04);
+    }
+
+    thead th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        color: #6c757d;
+    }
+
+    .drag-handle-cell {
+        cursor: grab;
+    }
+
+    .drag-handle {
+        opacity: 0.3;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    tr:hover .drag-handle {
+        opacity: 1;
+    }
+
+    .draggable-cell {
+        cursor: pointer;
+    }
+
+    /* Redesigned Status Badges */
+    .status-badge {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        line-height: 1.2;
+        min-width: 95px;
+    }
+
+    .status-badge small {
+        font-size: 0.7rem;
+        opacity: 0.8;
+        font-weight: 400;
+    }
+
+    .status-badge.sent,
+    .status-badge.replied {
+        background-color: #d1e7dd;
+        /* BS success-bg-subtle */
+        color: #0a3622;
+    }
+
+    .status-badge.not-sent {
+        background-color: #fff3cd;
+        /* BS warning-bg-subtle */
+        color: #664d03;
+    }
+
+    .status-badge.no-reply {
+        background-color: #e9ecef;
+        /* BS secondary-bg-subtle */
+        color: #495057;
+    }
+
+    .empty-state {
+        color: #6c757d;
+    }
+
+    .form-check-input {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+        // Search tags management
+        let searchTags = [];
+
+        // DOM elements
+        const searchInput = document.getElementById('searchInput');
+        const searchDropzone = document.getElementById('searchDropzoneArea');
+        const searchTagsContainer = document.getElementById('searchTags');
+        const contactsTable = document.getElementById('contactsTable');
+        const contactCount = document.getElementById('contactCount');
+        const selectAll = document.getElementById('selectAll');
+        const sendButton = document.getElementById('sendInitialEmails');
+
+        // Filter elements
+        const initialMailToggle = document.getElementById('initialMailToggle');
+        const repliedToggle = document.getElementById('repliedToggle');
+        const dateRangeToggle = document.getElementById('dateRangeToggle');
+        const dateRangeInputs = document.getElementById('dateRangeInputs');
+        const dateFrom = document.getElementById('initialMailDateFrom');
+        const dateTo = document.getElementById('initialMailDateTo');
+        const resetFilters = document.getElementById('resetFilters');
+
+        // Initialize drag and drop for table rows
+        if (contactsTable) {
+            new Sortable(contactsTable, {
+                animation: 150,
+                handle: '.drag-handle-cell',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'dragging',
+                onEnd: function (evt) {
+                    console.log('Row moved from', evt.oldIndex, 'to', evt.newIndex);
+                }
+            });
+        }
+
+        // Search functionality
+        searchInput.addEventListener('input', debounce(applyFilters, 300));
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                addSearchTag('search', this.value.trim());
+                this.value = '';
+            }
+        });
+
+        // Setup drag and drop for search tags
+        setupDragAndDrop();
+
+        // Filter event listeners
+        initialMailToggle.addEventListener('change', applyFilters);
+        repliedToggle.addEventListener('change', applyFilters);
+        dateRangeToggle.addEventListener('change', function () {
+            dateRangeInputs.style.display = this.checked ? 'block' : 'none';
+            applyFilters();
+        });
+        dateFrom.addEventListener('change', applyFilters);
+        dateTo.addEventListener('change', applyFilters);
+
+        // Reset filters
+        resetFilters.addEventListener('click', function () {
+            searchInput.value = '';
+            initialMailToggle.checked = false;
+            repliedToggle.checked = false;
+            dateRangeToggle.checked = false;
+            dateRangeInputs.style.display = 'none';
+            dateFrom.value = '';
+            dateTo.value = '';
+            searchTags = [];
+            updateSearchTags();
+            applyFilters();
+        });
+
+        // Selection functionality
+        selectAll.addEventListener('change', function () {
+            const visibleCheckboxes = Array.from(document.querySelectorAll('.select-row:not(#selectAllRows)'))
+                .filter(cb => !cb.closest('tr').style.display || cb.closest('tr').style.display !== 'none');
+
+            visibleCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSendButtonState();
+        });
+
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('select-row') && !e.target.id.includes('All')) {
+                updateSelectAllState();
+                updateSendButtonState();
+            }
+        });
+
+        // Send emails functionality
+        let isProcessing = false; // Prevent multiple simultaneous requests
+        
+        sendButton.addEventListener('click', function () {
+            // Prevent multiple rapid clicks
+            if (isProcessing) {
+                console.log('Already processing, please wait...');
+                return;
+            }
+            
+            const selectedIds = Array.from(document.querySelectorAll('.select-row:checked:not(#selectAllRows)'))
+                .map(checkbox => parseInt(checkbox.value));
+
+            console.log('Button clicked! Selected IDs:', selectedIds);
+
+            if (selectedIds.length === 0) {
+                alert('Please select at least one contact');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to send initial emails to ${selectedIds.length} selected contacts?`)) {
+                console.log('User cancelled');
+                return;
+            }
+
+            // Set processing flag and disable button immediately
+            isProcessing = true;
+            const originalText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Sending...';
+
+            console.log('Sending request to backend...');
+
+            // Send AJAX request
+            fetch('/api/contacts/send-initial', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ contact_ids: selectedIds })
+            })
+                .then(response => {
+                    console.log('Response received:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    // Backend returns 'total_contacts' not 'sent_count'
+                    if (data.total_contacts !== undefined) {
+                        alert(`Successfully queued ${data.total_contacts} email(s) for sending!`);
+                        location.reload();
+                    } else if (data.processed_count !== undefined) {
+                        alert(data.message || `Processed ${data.processed_count} contacts`);
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Emails are being processed');
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error sending emails: ' + error.message);
+                })
+                .finally(() => {
+                    isProcessing = false;
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                });
+        });
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function setupDragAndDrop() {
+            // Make draggable cells work
+            document.querySelectorAll('.draggable-cell').forEach(cell => {
+                cell.addEventListener('dragstart', function (e) {
+                    const text = this.textContent.trim();
+                    e.dataTransfer.setData('text/plain', text);
+                    e.dataTransfer.effectAllowed = 'copy';
+
+                    // Determine tag type based on column
+                    const cellIndex = Array.from(this.parentNode.children).indexOf(this);
+                    const tagType = cellIndex === 2 ? 'name' : 'industry';
+                    e.dataTransfer.setData('application/tag-type', tagType);
+                });
+            });
+
+            // Setup dropzone events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                searchDropzone.addEventListener(eventName, preventDefaults);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                searchDropzone.addEventListener(eventName, () => {
+                    searchDropzone.classList.add('active');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                searchDropzone.addEventListener(eventName, () => {
+                    searchDropzone.classList.remove('active');
+                });
+            });
+
+            searchDropzone.addEventListener('drop', function (e) {
+                const text = e.dataTransfer.getData('text/plain').trim();
+                const tagType = e.dataTransfer.getData('application/tag-type') || 'search';
+
+                if (text && text !== 'N/A') {
+                    addSearchTag(tagType, text);
+                }
+            });
+        }
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function addSearchTag(type, value) {
+            if (!tagExists(type, value)) {
+                searchTags.push({ type, value });
+                updateSearchTags();
+                applyFilters();
+            }
+        }
+
+        function tagExists(type, value) {
+            return searchTags.some(tag =>
+                tag.type === type && tag.value.toLowerCase() === value.toLowerCase()
+            );
+        }
+
+        function removeSearchTag(index) {
+            searchTags.splice(index, 1);
+            updateSearchTags();
+            applyFilters();
+        }
+
+        function updateSearchTags() {
+            searchTagsContainer.innerHTML = '';
+            const placeholder = searchDropzone.querySelector('.dropzone-placeholder');
+
+            if (searchTags.length === 0) {
+                placeholder.style.display = 'block';
+                return;
+            }
+
+            placeholder.style.display = 'none';
+
+            searchTags.forEach((tag, index) => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'search-tag';
+                tagElement.innerHTML = `
+                    <span>${tag.type}: ${tag.value}</span>
+                    <span class="remove-tag" data-index="${index}">&times;</span>
+                `;
+                searchTagsContainer.appendChild(tagElement);
+            });
+
+            // Add event listeners to remove buttons
+            searchTagsContainer.querySelectorAll('.remove-tag').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const index = parseInt(this.dataset.index);
+                    removeSearchTag(index);
+                });
+            });
+        }
+
+        function applyFilters() {
+            const searchText = searchInput.value.toLowerCase().trim();
+            const showInitialMailOnly = initialMailToggle.checked;
+            const showRepliedOnly = repliedToggle.checked;
+            const dateFromValue = dateFrom.value;
+            const dateToValue = dateTo.value;
+            const useDateRange = dateRangeToggle.checked && (dateFromValue || dateToValue);
+
+            let visibleCount = 0;
+            const totalRows = contactsTable.querySelectorAll('tr[data-id]');
+
+            totalRows.forEach(row => {
+                let shouldShow = true;
+
+                // Get row data - FIXED INDICES
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 8) return; // Skip if not enough cells
+
+                const name = cells[2].textContent.toLowerCase().trim();
+                const email = cells[3].textContent.toLowerCase().trim();
+                const company = cells[4].textContent.toLowerCase().trim();
+                const industry = cells[5].textContent.toLowerCase().trim(); // ✓ FIXED: Changed from 6 to 5
+
+                const initialSent = row.dataset.initialSent === 'yes';
+                const replied = row.dataset.replied === 'yes';
+                const initialSentDate = row.dataset.initialSentDate;
+
+                // Apply search text filter
+                if (searchText) {
+                    const matchesSearch = name.includes(searchText) ||
+                        email.includes(searchText) ||
+                        company.includes(searchText) ||
+                        industry.includes(searchText);
+                    if (!matchesSearch) shouldShow = false;
+                }
+
+                // Apply search tags filter
+                if (searchTags.length > 0 && shouldShow) {
+                    const matchesTags = searchTags.every(tag => {
+                        const tagValue = tag.value.toLowerCase();
+                        if (tag.type === 'name') {
+                            return name.includes(tagValue);
+                        } else if (tag.type === 'email') {
+                            return email.includes(tagValue);
+                        } else if (tag.type === 'company') {
+                            return company.includes(tagValue);
+                        } else if (tag.type === 'industry') {
+                            return industry.includes(tagValue);
+                        } else if (tag.type === 'search') {
+                            return name.includes(tagValue) ||
+                                email.includes(tagValue) ||
+                                company.includes(tagValue) ||
+                                industry.includes(tagValue);
+                        }
+                        return true;
+                    });
+                    if (!matchesTags) shouldShow = false;
+                }
+
+                // Apply initial mail filter
+                if (showInitialMailOnly && shouldShow) {
+                    if (!initialSent) shouldShow = false;
+                }
+
+                // Apply replied filter
+                if (showRepliedOnly && shouldShow) {
+                    if (!replied) shouldShow = false;
+                }
+
+                // Apply date range filter
+                if (useDateRange && shouldShow) {
+                    // Only filter if the contact has an initial sent date
+                    if (initialSent && initialSentDate) {
+                        try {
+                            const rowDate = new Date(initialSentDate);
+
+                            if (dateFromValue) {
+                                const fromDate = new Date(dateFromValue);
+                                fromDate.setHours(0, 0, 0, 0);
+                                if (rowDate < fromDate) shouldShow = false;
+                            }
+
+                            if (dateToValue && shouldShow) {
+                                const toDate = new Date(dateToValue);
+                                toDate.setHours(23, 59, 59, 999);
+                                if (rowDate > toDate) shouldShow = false;
+                            }
+                        } catch (error) {
+                            console.error('Date parsing error:', error);
+                        }
+                    } else {
+                        // If date range is active but contact has no date, hide it
+                        shouldShow = false;
+                    }
+                }
+
+                // Show/hide row
+                row.style.display = shouldShow ? '' : 'none';
+                if (shouldShow) visibleCount++;
+            });
+
+            // Update contact count
+            const totalCount = totalRows.length;
+            contactCount.textContent = `${visibleCount} of ${totalCount} contacts`;
+
+            // Update select all state
+            updateSelectAllState();
+            updateSendButtonState();
+        }
+
+        function updateSelectAllState() {
+            const visibleCheckboxes = Array.from(document.querySelectorAll('.select-row:not(#selectAllRows)'))
+                .filter(cb => !cb.closest('tr').style.display || cb.closest('tr').style.display !== 'none');
+
+            const checkedVisibleBoxes = visibleCheckboxes.filter(cb => cb.checked);
+
+            if (visibleCheckboxes.length === 0) {
+                selectAll.indeterminate = false;
+                selectAll.checked = false;
+            } else if (checkedVisibleBoxes.length === visibleCheckboxes.length) {
+                selectAll.indeterminate = false;
+                selectAll.checked = true;
+            } else if (checkedVisibleBoxes.length > 0) {
+                selectAll.indeterminate = true;
+                selectAll.checked = false;
+            } else {
+                selectAll.indeterminate = false;
+                selectAll.checked = false;
+            }
+        }
+
+        function updateSendButtonState() {
+            const checkedBoxes = document.querySelectorAll('.select-row:checked:not(#selectAllRows)');
+            const visibleCheckedBoxes = Array.from(checkedBoxes).filter(cb =>
+                !cb.closest('tr').style.display || cb.closest('tr').style.display !== 'none'
+            );
+
+            sendButton.disabled = visibleCheckedBoxes.length === 0;
+
+            if (visibleCheckedBoxes.length > 0) {
+                const originalText = sendButton.innerHTML;
+                if (!originalText.includes('spinner')) {
+                    sendButton.innerHTML = `<i class="bi bi-send-plus"></i> Send Initial Emails (${visibleCheckedBoxes.length})`;
+                }
+            } else {
+                sendButton.innerHTML = '<i class="bi bi-send-plus"></i> Send Initial Emails';
+            }
+        }
+
+        // Initialize filters
+        applyFilters();
+    });
+</script>
+{% endblock %}
