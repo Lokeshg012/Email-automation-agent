@@ -1,4 +1,4 @@
-# 🔥 PULP EMAIL AGENT 🔥
+# PULP EMAIL AGENT 
 ## *The AI That Never Sleeps (So You Can)*
 
 Welcome to the **PULP EMAIL AGENT** – an absolutely *unhinged* AI-powered email automation beast that does what 10 sales reps can't: work 24/7 without coffee breaks, sick days, or existential crises.
