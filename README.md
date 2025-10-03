@@ -55,7 +55,7 @@ This isn't your grandma's email client. This is a **fully autonomous, sentiment-
 ### Step 1: Clone This Bad Boy
 ```bash
 git clone <your-repo-url>
-cd pulp-intern
+cd email-agent
 ```
 
 ### Step 2: Install Dependencies
@@ -165,7 +165,7 @@ POST /contacts/upload
 
 ## 🤖 The AI Prompts (The Secret Sauce)
 
-This thing uses **carefully crafted prompts** that make GPT-4 write like Ambika Sharma, the Chief Strategist at Pulp Strategy.
+This thing uses **carefully crafted prompts**.
 
 ### Email Characteristics:
 - ✅ **Hyper-personalized** (mentions company, industry, goals)
@@ -238,7 +238,7 @@ create_tables()
 ## 🎨 File Structure
 
 ```
-pulp-intern/
+email-agent/
 ├── app.py                  # Main FastAPI app
 ├── mail_service.py         # The email engine (56KB of pure chaos)
 ├── drip_logic.py           # Drip campaign logic
