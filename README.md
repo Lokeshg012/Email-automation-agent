@@ -255,36 +255,6 @@ pulp-intern/
 └── env/                    # Virtual environment (ignored by git)
 ```
 
----
-
-## 🔐 Security Notes
-
-- **NEVER** commit your `.env` file
-- Use environment variables in production
-- Change the `SECRET_KEY` to something secure
-- Don't expose your OpenAI API key
-- Use HTTPS in production
-
----
-
-## 🚀 Deployment (Going Live)
-
-### Option 1: Traditional Server
-```bash
-gunicorn app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
-
-### Option 2: Docker (For the Cool Kids)
-```dockerfile
-# Create a Dockerfile if you want
-# I didn't include one because I'm lazy
-```
-
-### Option 3: Cloud (AWS, GCP, Azure)
-Deploy it wherever. It's just Python. It runs anywhere.
-
----
-
 ## 📝 License
 
 Do whatever you want with this. Just don't sue me if it sends an email to the wrong person and costs you a client.
@@ -317,6 +287,6 @@ Now go forth and automate! 🚀
 
 ---
 
-### Made with 💀 by someone who's tired of sending emails manually
+### Made by someone who's tired of sending emails manually
 
 **P.S.** Don't forget to star this repo if it saves your sanity. Or don't. I'm not your boss.
