@@ -85,7 +85,6 @@ class MailService:
                 )
 
             if run.status == "completed":
-                # List messages and return the latest one from the assistant
                 messages = self.openai_client.beta.threads.messages.list(
                     thread_id=active_thread_id
                 )
@@ -99,19 +98,12 @@ class MailService:
 
 
     def get_or_create_thread_for_contact(self, contact: Contact, db_session: Session = None) -> str:
-        """
-        Get or create a thread for a contact.
-        If db_session is provided, uses it (for when called within an existing transaction).
-        Otherwise creates its own session.
-        """
         # Helper function to check for existing thread
         def check_existing_thread(db):
             return db.query(ContentInfo).filter(
                 ContentInfo.contact_id == contact.id,
                 ContentInfo.thread_id.isnot(None)
             ).first()
-        
-        # Check if thread already exists
         if db_session:
             existing_content = check_existing_thread(db_session)
         else:
@@ -121,8 +113,6 @@ class MailService:
         if existing_content and existing_content.thread_id:
             logger.info(f"Using existing thread {existing_content.thread_id} for contact {contact.email}")
             return existing_content.thread_id
-        
-        # Create OpenAI thread OUTSIDE of database transaction to avoid long locks
         try:
             thread = self.openai_client.beta.threads.create()
             new_thread_id = thread.id
@@ -134,7 +124,6 @@ class MailService:
         # Store thread in database
         try:
             if db_session:
-                # Use provided session (we're in a transaction)
                 existing = check_existing_thread(db_session)
                 if existing:
                     logger.info(f"Thread already exists for contact {contact.email}, using {existing.thread_id}")
@@ -153,7 +142,6 @@ class MailService:
                 logger.info(f"Stored thread {new_thread_id} in database for contact {contact.email}")
                 return new_thread_id
             else:
-                # Create our own session
                 with get_db_session() as db:
                     existing = check_existing_thread(db)
                     if existing:
@@ -237,20 +225,17 @@ Your Actual Subject Line|||Your Full Email Body Here, Including the Signature
                 except ValueError as e:
                     logger.error(f"Error splitting content for {contact.email}: {e}")
         
-        # If splitting fails, try to extract subject and body manually
             lines = content.strip().split('\n')
             if len(lines) >= 2:
                 subject = lines[0].strip()
                 body = '\n'.join(lines[1:]).strip()
                 return (subject, body)
-        
-        # Final fallback - use the entire content as body with a generic subject
+    
             logger.warning(f"Using fallback parsing for {contact.email}")
             return ("Following up on your business goals", content.strip())
         
         except Exception as e:
             logger.error(f"Exception in generate_initial_email_content for {contact.email}: {str(e)}")
-            # Return a safe fallback
             return (
                 f"Partnership opportunity for {contact.company_name}",
                 f"Hi {contact.name},\n\nI hope this email finds you well.\n\nBest regards,\n\nLokesh Garg\nBusiness Development Partner\nPulp Strategy\n+91 45289157"
@@ -298,16 +283,12 @@ Output Format:Provide your final, complete email output in this exact format, us
             return "Following up", content
 
     def _store_cc_info(self, msg: email.message.Message, db: Session) -> None:
-        """
-        Store CC recipients' information when receiving a reply
-        """
         cc_list = msg.get_all('Cc', [])
         if not cc_list:
             return
 
         from_email = parseaddr(msg.get('From', ''))[1]
         
-        # Get referrer's company name from Contact table
         referrer = db.query(Contact).filter(Contact.email == from_email).first()
         referrer_company = referrer.company_name if referrer else None
         
@@ -325,9 +306,6 @@ Output Format:Provide your final, complete email output in this exact format, us
                 logger.info(f"Stored CC recipient: {cc_email} from company {referrer_company} referred by {from_email}")
 
     def _extract_main_reply(self, body_text: str) -> str:
-        """
-        Extracts only the main reply body, removing quoted text and signatures.
-        """
         if body_text is None:
             return ""
         
@@ -344,7 +322,6 @@ Output Format:Provide your final, complete email output in this exact format, us
         return body_text.strip()
      
     def _build_references_chain(self, original_msg: email.message.Message) -> tuple[str, str]:
-        """Helper method to build proper email thread references chain"""
         current_msg_id = original_msg.get('Message-ID', '').strip()
         previous_refs = original_msg.get('References', '').strip()
         
@@ -372,17 +349,14 @@ Output Format:Provide your final, complete email output in this exact format, us
         original_date = original_message.get("Date")
         original_body_text = self._extract_main_reply(get_body_from_message(original_message))
         
-        # Convert the plain text body to basic HTML (preserving line breaks)
+
         original_body_html = original_body_text.replace('\n', '<br>')
 
-        # Create the standard "On [date], [sender] wrote:" header
         quote_header = f'''
 <p style="color:#5e5e5e; margin-top:20px; margin-bottom:10px;">
     On {original_date}, {original_sender} wrote:
 </p>
 '''
-
-        # Wrap the original email in a blockquote, the standard for email clients
         blockquote = f'''
 <blockquote style="border-left:2px solid #cccccc; margin:0 0 20px 0; padding-left:15px;">
     {original_body_html}
@@ -442,10 +416,6 @@ Output Format:Provide your final, complete email output in this exact format, us
         return None
 
     def agent_3_reply_checking(self) -> List[email.message.Message]:
-        """
-        Checks for recent emails and filters out those already
-        processed in the DB, without using the UNSEEN flag.
-        """
         emails_to_process = []
         with get_db_session() as db:
             try:
@@ -725,7 +695,6 @@ Regarding your questions: {queries} - I'd be happy to provide detailed insights 
 If you find this information useful or have any follow-up questions, feel free to reach out. I'm here to help."""
 
     def send_negative_response_email(self, db: Session, contact: Contact, original_msg: email.message.Message, ai_response: str):
-        """Send email for negative responses with queries"""
         subject = original_msg.get("Subject", "")
         subject = subject if subject.lower().startswith("re:") else f"Re: {subject}"
 
@@ -777,11 +746,9 @@ Chief Strategist
 Pulp Strategy Communications Pvt. Ltd."""
         full_body = self._create_threaded_body(content, original_msg)
         
-        # Build proper References chain
         previous_refs = original_msg.get('References', '').strip()
         current_msg_id = original_msg.get('Message-ID', '').strip()
-        
-        # Ensure we have all message IDs in the chain
+    
         references = []
         if previous_refs:
             references.extend([ref.strip() for ref in previous_refs.split() if ref.strip()])
@@ -910,8 +877,6 @@ I believe a brief conversation would be the most effective way to explore this o
             </a>
         </div>
         """
-
-    # Create plain text version
         plain_text = f"""Hi {contact.name},
 
         {personalized_response}
@@ -979,21 +944,18 @@ Provide your response as a single string in this exact format: Subject Line|||Em
 """
         ai_response = None
         try:
-            # Make the API call with the correct model name
             response = self.openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3  
             )
             ai_response = response.choices[0].message.content
-            
-            # Parse the response into subject and body
+        
             try:
                 new_subject, email_body = ai_response.split('|||', 1)
                 if new_subject and new_subject.strip():
                     subject = new_subject.strip()
             except ValueError:
-                # If splitting fails, use the whole response as body
                 email_body = ai_response
                 logger.warning(f"Could not parse subject from AI response for {contact.email}")
             
@@ -1008,7 +970,6 @@ Provide your response as a single string in this exact format: Subject Line|||Em
             plain_text_content = email_body.replace('[MEETING_BUTTON]', plain_text_link)
             full_plain_text_content = self._create_threaded_body(plain_text_content, original_msg)
             
-            # Get threading information
             in_reply_to, references_chain = self._build_references_chain(original_msg)
             
             # Send the email
@@ -1115,10 +1076,8 @@ mail_service = MailService()
 
 def send_initial_email(contact: Contact, db: Session) -> bool:
     try:
-        # Pass db session to avoid nested transactions
         subject, content = mail_service.generate_initial_email_content(contact, db)
         
-        # Send the email and get its unique ID
         message_id = mail_service.send_email(contact.email, subject=subject, content=content)
         
         if message_id:
@@ -1127,7 +1086,6 @@ def send_initial_email(contact: Contact, db: Session) -> bool:
                 email_type="initial", subject=subject, body=content,
                 message_id=message_id
             ))
-            # Use flush instead of commit - let the caller (email_routes.py) handle commit
             db.flush()
             return True
         else:
@@ -1140,7 +1098,6 @@ def send_initial_email(contact: Contact, db: Session) -> bool:
 
 def send_drip_email(contact: Contact, drip_number: int, db: Session) -> bool:
     try:
-        # Pass db session to avoid nested transactions
         subject, content = mail_service.generate_drip_content(contact, drip_number, db)
         
         message_id = mail_service.send_email(
@@ -1158,7 +1115,6 @@ def send_drip_email(contact: Contact, drip_number: int, db: Session) -> bool:
                 body=content,
                 message_id=message_id
             ))
-            # Use flush instead of commit - let the caller handle commit
             db.flush()
             return True
     except Exception as e:
