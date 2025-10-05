@@ -169,35 +169,7 @@ class MailService:
     def generate_initial_email_content(self, contact: Contact, db_session: Session = None) -> tuple[str, str]:
         thread_id = self.get_or_create_thread_for_contact(contact, db_session)
         prompt = f"""
-Write a hyper-personalized, high-level strategic outreach email from the perspective of Ambika Sharma, owner and chief strategist at Pulp Strategy.
-Your tone should be that of a confident expert—an insider who has spotted a profound, often overlooked, opportunity and is providing a valuable, unsolicited blueprint for success. The email is a strategic opening move, not a sales pitch.
- 
-Required Inputs
- 
-The final output will be based on the following specific data points:
-Contact Name: {contact.name}
-Company Name: {contact.company_name}
-Company Industry: {contact.industry}
-High-Stakes Business Goal: A specific, publicly stated goal, strategic move, or business challenge (e.g., "expanding market share," "improving customer LTV," "brand repositioning").
-Relevant Pulp Strategy Service/Case Study: A specific service or case study result that directly addresses the business goal (e.g., "our unique approach to immersive brand activations," "data-driven loyalty programs").
- 
-Email Blueprint
- 
-> Subject Line: A single, intriguing observation, hyper-specific to the business goal. It must be under 7 words, professional, and contain no question marks.
-> Opening Hook: Begin with "Hi {contact.name}," (line space). Starting should be polite and some formal greeting like "hope you are doing well". The next sentence must be a knockout—a precise strategic observation that proves a high-level understanding of their business. Avoid all generic pleasantries.
-> Strategic Insight: The main body should diagnose the identified challenge and articulate a concise, high-impact solution. Connect the specified Pulp Strategy service or case study result directly to their business goal, positioning it as a catalyst for success. This must feel like a strategic blueprint.
-> Closing: End with a low-pressure, intelligent question that invites a strategic dialogue, not a meeting. The question should be about the core idea you've presented and prompt them to think about their next strategic move.
- 
-Mandatory Rules & Constraints
- 
-1. The entire email must feel like a whispered secret, not a shouted advertisement. The language must be sharp and precise.
-2. Don't add "subject line:" in subject line output for perfect parsing, just content of the subject line.
-3. Add spaces in the email output wherever needed.
-4. The final output must be a complete, fully-written, ready-to-send email.
-5. Do not include any placeholders, square brackets, or source links in the final email.
-6. Do not include internal instructions or labels (e.g., "Hook," "Strategic Insight") in the final output.
-7. The email must end with the following signature: Best regards, Ambika Sharma Chief Strategist Pulp Strategy Communications Pvt. Ltd.
- 
+Write the prompt for initial mail in your own way.
 Final Output Format:
  
 Provide your final, complete email in the following exact format:
@@ -243,32 +215,7 @@ Your Actual Subject Line|||Your Full Email Body Here, Including the Signature
     def generate_drip_content(self, contact: Contact, drip_number: int, db_session: Session = None) -> tuple[str, str]:
         thread_id = self.get_or_create_thread_for_contact(contact, db_session)
         prompt = f"""
-Persona: You are Ambika Sharma, a sharp and insightful Chief Strategist at Pulp Strategy. Your tone is helpful and respectful, continuing a conversation from a previous, high-level strategic email. You do not "check in"; you provide tangible value.
-
-Opening (The Hook): Start the email with greeting like Hi {contact.name},.
-Assignment: Write a brief, value-driven follow-up email to {contact.name} at {contact.company_name}. This is Drip Email #{drip_number} in the sequence.
-
-Source Materials:
-
-The attached Pulp Strategy knowledge file. This file contains our award-winning case studies, unique intellectual properties (like Neurorank™), and our core services in brand activation, digital transformation, and full-funnel strategy.
-
-Creative Brief for Drip Email #{drip_number}:
-
-1. If this is Drip #1 (The Gentle Nudge): Your goal is to subtly resurface the original idea by introducing a powerful, industry-relevant metric. Find a strategic data point or a compelling statistic from the knowledge file that directly supports your initial suggestion. The body must be adding immediate, quantifiable context to the conversation.
-2. If this is Drip #2 (The Proof Point): Your goal is to provide concrete, real-world proof. Find the most relevant, high-impact mini-case study or success story from the knowledge file, particularly one in the '{contact.industry}' sector or a similar challenge. Summarize the problem and the outcome concisely, highlighting the business impact. Use a new, simple subject line like "A quick example for {contact.company_name}."
-3. If this is Drip #3 (The Graceful Exit): Your goal is to politely and professionally close the loop, acknowledging their focus and time. State that this will be your last note on this specific topic for now, but gracefully leave the door open for a future conversation on their terms. The subject should be simple and final, such as "Closing the loop."
-
-Mandatory Rules:
-1. Don't add question mark in subject line please and proper gaps in content wherever suitable.
-2. Start the email with the greeting. The final output must be a complete, fully-written, ready-to-send email.
-3. Don't add "subject line:" in subject line output for perfect parsing, just content of the subject line.
-4. There must be absolutely NO placeholders or square brackets left in the text.
-5. Do not use generic phrases like "Just following up" or "Checking in."
-6. The email body must be very brief (2-4 sentences).
-7. Do not add any special characters or symbols in the email.
-8. Don't include any brackets or symbols in the email nor provide any source links.
-9. The signature must be exactly as follows and included at the end of the body: Best regards, Ambika Sharma Chief Strategist Pulp Strategy Communications Pvt. Ltd.
-
+Write the prompt for initial mail in your own way.
 Output Format:Provide your final, complete email output in this exact format, using "|||" as a separator. Do not include any other text before or after this structure. Do NOT include the word "Subject:" or any prefixes before the subject line.
     """
         content = self._get_assistant_response(prompt,thread_id)
@@ -703,9 +650,9 @@ If you find this information useful or have any follow-up questions, feel free t
 {ai_response}
 
 Best regards,
-Ambika Sharma
+Lokesh Garg
 Chief Strategist
-Pulp Strategy Communications Pvt. Ltd."""
+"""
         full_body = self._create_threaded_body(content, original_msg)
 
         in_reply_to, references_chain = self._build_references_chain(original_msg)
@@ -741,9 +688,9 @@ Pulp Strategy Communications Pvt. Ltd."""
 {ai_response}
 
 Best regards,
-Ambika Sharma
+Lokesh Garg
 Chief Strategist
-Pulp Strategy Communications Pvt. Ltd."""
+"""
         full_body = self._create_threaded_body(content, original_msg)
         
         previous_refs = original_msg.get('References', '').strip()
@@ -790,9 +737,9 @@ Thank you for taking the time to respond to my message. I understand you may be 
 If circumstances change or if you'd like to explore how we might help {contact.company_name} in the future, please don't hesitate to reach out.
 
 Best regards,
-Ambika Sharma
+Lokesh Garg
 Chief Strategist
-Pulp Strategy Communications Pvt. Ltd."""
+"""
         full_body = self._create_threaded_body(content, original_msg)
         success = self.send_email(to_email=contact.email, subject=subject, content=full_body, in_reply_to=in_reply_to, references=references_chain)
         if success:
@@ -922,22 +869,7 @@ Pulp Strategy Communications Pvt. Ltd"""
         reply_body = self._extract_main_reply(get_body_from_message(original_msg))
         booking_url = 'https://outlook.office.com/book/lol@pulpstrategy.com/s/_y6EIIzMKEWQlBg_0SarWQ2?ismsaljsauthenabled'
         prompt = f"""
-You are Ambika Sharma, owner and chief strategist at Pulp Strategy.
-Your goal is to write a warm, personalized email to convert a prospect's positive interest into a meeting.
-You are acting as a skilled communicator, NOT a file searcher.
-
-**Context:**
-- Their name: {contact.name}
-- Their company: {contact.company_name}
-- Their positive reply to our first email: "{reply_body}"
-
-**Your Task:**
-Read their reply carefully. Write a natural, human-sounding response that:
-1.  Acknowledges their specific message (e.g., if they said "this is timely", mention that).
-2.  Briefly and relevantly bridges their interest to the value Pulp Strategy provides.
-3.  Naturally transitions to asking for a brief introductory call.
-4.  Inserts the exact placeholder [MEETING_BUTTON] where the call-to-action should logically go.
-5.  Do not add any special character or symbols in mail or any bold letters i.e. ** (most important to remember).
+Write your desired prompt here.
 
 **Output Format:**
 Provide your response as a single string in this exact format: Subject Line|||Email Body
@@ -1010,9 +942,9 @@ Thank you for taking the time to respond. I appreciate your feedback and underst
 If circumstances change in the future or if you ever need digital marketing and strategy services, please don't hesitate to reach out.
 
 Best regards,
-Ambika Sharma
+Lokesh Garg
 Chief Strategist
-Pulp Strategy Communications Pvt. Ltd."""
+"""
         full_body = self._create_threaded_body(content, original_msg)
         in_reply_to, references_chain = self._build_references_chain(original_msg)
         success = self.send_email(to_email=contact.email, subject=subject, content=full_body, in_reply_to=in_reply_to, references=references_chain)
@@ -1043,9 +975,9 @@ As requested, you have been removed from our mailing list and will not receive a
 We appreciate you letting us know.
 
 Best regards,
-Ambika Sharma
+Lokesh Garg
 Chief Strategist
-Pulp Strategy Communications Pvt. Ltd."""
+"""
         full_body = self._create_threaded_body(content, original_msg)
 
         success = self.send_email(
