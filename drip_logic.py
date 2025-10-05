@@ -94,10 +94,6 @@ Example responses:
     
 
     def process_initial_emails(self):
-        """
-        Finds all new contacts, generates their industry if missing,
-        and triggers the initial email send.
-        """
         with get_db_session() as db:
             contacts = db.query(Contact).filter(Contact.mail_sent_status.is_(None)).all()
             logger.info(f"Found {len(contacts)} new contacts to process for initial emails.")
@@ -118,8 +114,6 @@ Example responses:
                             logger.error(f"Failed to generate industry for {contact.email}, skipping.")
                             continue
                     
-                    # Send the email and update the contact's status on success.
-                    # The send_initial_email function now handles creating the ContentInfo record.
                     if send_initial_email(contact, db):
                         contact.mail_sent_status = 1
                         contact.first_mail_date = datetime.now(ZoneInfo("Asia/Kolkata"))
@@ -134,11 +128,8 @@ Example responses:
                     db.rollback()
 
     def process_drips(self):
-        """Processes all contacts eligible for their next drip email."""
         with get_db_session() as db:
             now = datetime.now(ZoneInfo("Asia/Kolkata"))
-
-            # Find contacts who haven't replied and are in the drip sequence.
             contacts = db.query(Contact).filter(
                 or_(Contact.status.is_(None), Contact.status != "do_not_contact"),
                 Contact.mail_sent_status.in_([1, 2, 3])
@@ -157,8 +148,6 @@ Example responses:
 
                     if drip_to_send > 0:
                         logger.info(f"Attempting to send Drip {drip_to_send} to {contact.email}")
-                        
-                        # The send_drip_email function handles its own ContentInfo creation.
                         if send_drip_email(contact, drip_to_send, db):
                             if drip_to_send == 1:
                                 contact.drip1_date = now
@@ -179,19 +168,15 @@ Example responses:
                     logger.error(f"A critical error occurred processing drips for {contact.email}: {str(e)}")
                     db.rollback()
 
-# Global drip campaign manager
 drip_manager = DripCampaignManager()
 
 def add_new_contact_and_start_drip(name: str, email: str, company_name: str, 
                                  company_url: str = None, industry: str = None) -> dict:
-    """Add new contact to database - Agent 1 will handle initial email sending"""
     with get_db_session() as db:
-        # Check if contact already exists
         existing_contact = db.query(Contact).filter(Contact.email == email).first()
         if existing_contact:
             return {"error": "Contact already exists", "contact_id": existing_contact.id}
         
-        # Create new contact (without sending initial email)
         contact = Contact(
             name=name,
             email=email,
@@ -215,6 +200,5 @@ def add_new_contact_and_start_drip(name: str, email: str, company_name: str,
     db.close()
 
 def trigger_drip_processing():
-    """Manually trigger drip processing for testing"""
     drip_manager.process_drips()
     return {"message": "Drip processing triggered"}
